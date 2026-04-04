@@ -1064,24 +1064,27 @@ let navCollapsed = false;
 let db = {
   expenses: [], recurring: [], recurringConfs: [],
   providers: [], roiItems: [], roiReturns: {},
+  postage: {},
   categories: ['Marketing / Ads','Software','VA / Staff','Postage','Prep Supplies','Prep Service','Business Expense','Subscriptions','Training','Finance','Accounting','Discord Group'],
-  sbUrl: '', sbKey: ''
+  sbUrl: 'https://ffhscmrbqzqyakbwwuul.supabase.co',
+  sbKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmaHNjbXJicXpxeWFrYnd3dXVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUzMjU4NTUsImV4cCI6MjA2MDkwMTg1NX0.D5b7gvMXKYhYDMk_jLnX28s3tAhRePV9uKSRfWPJlYU'
 };
 
 // ── STORAGE ───────────────────────────────────────────────────────────────────
-function save() { localStorage.setItem('et_db', JSON.stringify(db)); }
+function save() { 
+  // Don't save to localStorage - Supabase only!
+  // Each function will call syncToSupabase() directly
+}
 function load() {
-  // COMPLETE WIPE - delete all old data
-  localStorage.removeItem('et_db');
-  // Start completely fresh - no old February data will load
+  // Don't load from localStorage - Supabase only!
+  // loadSB() will populate db on app start
 }
 
 function wipeEverything(){
-  if(!confirm('⚠️ DELETE ALL DATA?\n\nThis will completely wipe localStorage and refresh the app.\n\nAre you SURE?')) return;
-  localStorage.removeItem('et_db');
-  db = {expenses:[],recurring:[],providers:[],roiItems:[],roiReturns:{},postage:{},wizardState:{}};
-  save();
-  location.reload();
+  if(!confirm('⚠️ DELETE ALL DATA FROM SUPABASE?\n\nThis will completely wipe all your data.\n\nAre you SURE?')) return;
+  // Clear local db object
+  db = {expenses:[],recurring:[],providers:[],roiItems:[],roiReturns:{},postage:{},wizardState:{},categories:['Marketing / Ads','Software','VA / Staff','Postage','Prep Supplies','Prep Service','Business Expense','Subscriptions','Training','Finance','Accounting','Discord Group'],sbUrl:db.sbUrl,sbKey:db.sbKey};
+  toast('Data cleared. Reload to resync from Supabase.','success');
 }
 
 // ── SUPABASE ──────────────────────────────────────────────────────────────────
@@ -1095,10 +1098,121 @@ async function sbFetch(path, opts={}) {
 async function loadSB() {
   if (!db.sbUrl||!db.sbKey) return false;
   try {
-    const [e,r,c,p,ri] = await Promise.all([sbFetch('expenses?select=*&order=date.desc'),sbFetch('recurring?select=*'),sbFetch('recurring_confirmations?select=*'),sbFetch('providers?select=*&order=created_at.desc'),sbFetch('roi_items?select=*&order=created_at.desc')]);
-    if(e!==null) db.expenses=e; if(r!==null) db.recurring=r; if(c!==null) db.recurringConfs=c; if(p!==null) db.providers=p; if(ri!==null) db.roiItems=ri;
+    const [e,r,c,p,ri,pt,pe] = await Promise.all([
+      sbFetch('expenses?select=*&order=date.desc'),
+      sbFetch('recurring?select=*'),
+      sbFetch('recurring_confirmations?select=*'),
+      sbFetch('providers?select=*&order=created_at.desc'),
+      sbFetch('roi_items?select=*&order=created_at.desc'),
+      sbFetch('postage_tally?select=*'),
+      sbFetch('postage_entries?select=*')
+    ]);
+    if(e!==null) db.expenses=e; 
+    if(r!==null) db.recurring=r; 
+    if(c!==null) db.recurringConfs=c; 
+    if(p!==null) db.providers=p; 
+    if(ri!==null) db.roiItems=ri;
+    
+    // Rebuild postage tally from data
+    if(pt!==null && pe!==null) {
+      db.postage = {};
+      pt.forEach(tally => {
+        const mk = tally.month_key;
+        if(!db.postage[mk]) db.postage[mk] = {};
+        const entries = pe.filter(e => e.tally_id === tally.id);
+        db.postage[mk][tally.carrier] = {
+          entries: entries.map(e => ({ date: e.date, amount: e.amount })),
+          total: tally.total
+        };
+      });
+    }
     return true;
-  } catch(e){return false;}
+  } catch(e){console.error('loadSB error:',e);return false;}
+}
+
+async function syncPostageToSupabase(monthKey, carrier, data) {
+  if (!db.sbUrl || !db.sbKey) return;
+  try {
+    // Upsert postage_tally
+    const tallyRes = await sbFetch('postage_tally?month_key=eq.'+monthKey+'&carrier=eq.'+carrier, {
+      method: 'POST',
+      body: JSON.stringify({ month_key: monthKey, carrier: carrier, total: data.total }),
+      headers: { 'Prefer': 'resolution=merge-duplicates' }
+    });
+    
+    if (!tallyRes || tallyRes.length === 0) return;
+    
+    const tallyId = tallyRes[0].id;
+    
+    // Delete old entries for this tally
+    await fetch(db.sbUrl.replace(/\/$/, '') + '/rest/v1/postage_entries?tally_id=eq.' + tallyId, {
+      method: 'DELETE',
+      headers: { 'apikey': db.sbKey, 'Authorization': 'Bearer ' + db.sbKey }
+    });
+    
+    // Insert new entries
+    if (data.entries && data.entries.length > 0) {
+      await sbFetch('postage_entries', {
+        method: 'POST',
+        body: JSON.stringify(data.entries.map(e => ({ tally_id: tallyId, date: e.date, amount: e.amount }))),
+        headers: { 'Prefer': 'return=minimal' }
+      });
+    }
+  } catch(e) {
+    console.error('Sync error:', e);
+  }
+}
+
+async function syncExpenseToSupabase(expense) {
+  if (!db.sbUrl || !db.sbKey) return;
+  try {
+    await sbFetch('expenses', {
+      method: 'POST',
+      body: JSON.stringify(expense),
+      headers: { 'Prefer': 'resolution=merge-duplicates' }
+    });
+  } catch(e) {
+    console.error('Expense sync error:', e);
+  }
+}
+
+async function syncProviderToSupabase(provider) {
+  if (!db.sbUrl || !db.sbKey) return;
+  try {
+    await sbFetch('providers', {
+      method: 'POST',
+      body: JSON.stringify(provider),
+      headers: { 'Prefer': 'resolution=merge-duplicates' }
+    });
+  } catch(e) {
+    console.error('Provider sync error:', e);
+  }
+}
+
+async function syncRecurringToSupabase(recurring) {
+  if (!db.sbUrl || !db.sbKey) return;
+  try {
+    await sbFetch('recurring', {
+      method: 'POST',
+      body: JSON.stringify(recurring),
+      headers: { 'Prefer': 'resolution=merge-duplicates' }
+    });
+  } catch(e) {
+    console.error('Recurring sync error:', e);
+  }
+}
+
+async function syncROIToSupabase(roiItem) {
+  if (!db.sbUrl || !db.sbKey) return;
+  try {
+    await sbFetch('roi_items', {
+      method: 'POST',
+      body: JSON.stringify(roiItem),
+      headers: { 'Prefer': 'resolution=merge-duplicates' }
+    });
+  } catch(e) {
+    console.error('ROI sync error:', e);
+  }
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
@@ -2851,6 +2965,10 @@ function savePostageEntry(){
   db.postage[cmk][currentPostageCarrier].total += amount;
   
   save();
+  
+  // Sync to Supabase
+  syncPostageToSupabase(cmk, currentPostageCarrier, db.postage[cmk][currentPostageCarrier]);
+  
   renderPostage();
   closeModal('modal-postage');
   toast(`✓ Added £${amount.toFixed(2)} to ${currentPostageCarrier} (${date})`);
