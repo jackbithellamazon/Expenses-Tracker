@@ -1091,9 +1091,34 @@ function wipeEverything(){
 async function sbFetch(path, opts={}) {
   if (!db.sbUrl||!db.sbKey) return null;
   const url = db.sbUrl.replace(/\/$/,'')+'/rest/v1/'+path;
-  const res = await fetch(url,{headers:{'apikey':db.sbKey,'Authorization':'Bearer '+db.sbKey,'Content-Type':'application/json','Prefer':opts.prefer||'return=representation',...opts.headers},...opts});
-  if (!res.ok) return null;
-  const t = await res.text(); return t?JSON.parse(t):[];
+  const method = opts.method || 'GET';
+  const headers = {
+    'Content-Type': 'application/json',
+    'apikey': db.sbKey,
+    'Authorization': 'Bearer ' + db.sbKey
+  };
+  
+  const fetchOpts = {
+    method: method,
+    headers: headers
+  };
+  
+  if (opts.body) {
+    fetchOpts.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body);
+  }
+  
+  try {
+    const res = await fetch(url, fetchOpts);
+    if (!res.ok) {
+      console.error('Supabase error:', res.status, res.statusText);
+      return null;
+    }
+    const text = await res.text();
+    return text ? JSON.parse(text) : [];
+  } catch(e) {
+    console.error('sbFetch error:', e);
+    return null;
+  }
 }
 async function loadSB() {
   if (!db.sbUrl||!db.sbKey) return false;
