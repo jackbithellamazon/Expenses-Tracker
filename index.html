@@ -1732,6 +1732,8 @@ function editExpense(id){
 }
 
 async function saveExpense(){
+  debugLog('💾 saveExpense called');
+  debugLog(`📋 db.sbUrl=${!!db.sbUrl}, db.sbKey=${!!db.sbKey}`);
   const date=document.getElementById('e-date').value;
   const amount=document.getElementById('e-amount').value;
   const category=document.getElementById('e-category').value;
@@ -1755,6 +1757,7 @@ async function saveExpense(){
     if(db.sbUrl) await sbFetch('expenses?id=eq.'+exp.id,{method:'PATCH',body:JSON.stringify(exp)});
   } else {
     db.expenses.unshift(exp);
+    debugLog(`🚀 Calling sbFetch for POST`);
     if(db.sbUrl) await sbFetch('expenses',{method:'POST',body:JSON.stringify(exp)});
   }
   closeModal('modal-expense'); renderAll();
@@ -3313,10 +3316,10 @@ async function init(){
   const amtEl=document.getElementById('e-amount');
   if(amtEl) amtEl.addEventListener('input',updateVatPreview);
 
-  if(!db.roiReturns){db.roiReturns={};save();}
-  if(!db.postage){db.postage={};save();}
-  if(!db.wizardState){db.wizardState={};save();}
-  if(db.sbUrl&&db.sbKey) await loadSB();
+  if(!db.roiReturns){db.roiReturns={};}
+  if(!db.postage){db.postage={};}
+  if(!db.wizardState){db.wizardState={};}
+  // NO LOADING - just use empty app, all data goes to Supabase on save
   populateCatSelects();
   // Default analyse to this month
   const today=new Date();
