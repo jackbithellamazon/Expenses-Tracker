@@ -1683,13 +1683,35 @@ function renderExpenses(){
 async function toggleCheck(id){
   const e=db.expenses.find(x=>x.id===id); if(!e) return;
   e.checked=!e.checked; save();
-  if(db.sbUrl) await sbFetch('expenses?id=eq.'+id,{method:'PATCH',body:JSON.stringify({checked:e.checked})});
+  if(db.sbUrl && db.sbKey) {
+    const url = db.sbUrl.replace(/\/$/, '') + '/rest/v1/expenses?id=eq.' + id;
+    await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': db.sbKey,
+        'Authorization': 'Bearer ' + db.sbKey
+      },
+      body: JSON.stringify({checked: e.checked})
+    }).catch(e => debugLog(`❌ Update error: ${e.message}`));
+  }
   renderExpenses(); renderDashboard();
 }
 async function toggleSF(id){
   const e=db.expenses.find(x=>x.id===id); if(!e) return;
   e.sf_done=!e.sf_done; save();
-  if(db.sbUrl) await sbFetch('expenses?id=eq.'+id,{method:'PATCH',body:JSON.stringify({sf_done:e.sf_done})});
+  if(db.sbUrl && db.sbKey) {
+    const url = db.sbUrl.replace(/\/$/, '') + '/rest/v1/expenses?id=eq.' + id;
+    await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': db.sbKey,
+        'Authorization': 'Bearer ' + db.sbKey
+      },
+      body: JSON.stringify({sf_done: e.sf_done})
+    }).catch(e => debugLog(`❌ Update error: ${e.message}`));
+  }
   renderExpenses();
   toast(e.sf_done?'Marked as in Seller Fuse':'Removed from Seller Fuse');
 }
@@ -1771,12 +1793,33 @@ async function saveExpense(){
   if(editingId){
     const idx=db.expenses.findIndex(x=>x.id===editingId);
     if(idx!==-1){exp.checked=db.expenses[idx].checked;exp.sf_done=db.expenses[idx].sf_done;exp.review_status=db.expenses[idx].review_status||'';db.expenses[idx]=exp;}
-    if(db.sbUrl) await sbFetch('expenses?id=eq.'+exp.id,{method:'PATCH',body:JSON.stringify(exp)});
+    if(db.sbUrl && db.sbKey) {
+      const url = db.sbUrl.replace(/\/$/, '') + '/rest/v1/expenses?id=eq.' + exp.id;
+      await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': db.sbKey,
+          'Authorization': 'Bearer ' + db.sbKey
+        },
+        body: JSON.stringify(exp)
+      }).catch(e => debugLog(`❌ Update error: ${e.message}`));
+    }
   } else {
     db.expenses.unshift(exp);
-    debugLog(`🚀 Calling sbFetch for POST`);
-    if(db.sbUrl) await sbFetch('expenses',{method:'POST',body:JSON.stringify(exp)});
-  }
+    debugLog(`🚀 Calling fetch for POST`);
+    if(db.sbUrl && db.sbKey) {
+      const url = db.sbUrl.replace(/\/$/, '') + '/rest/v1/expenses';
+      await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': db.sbKey,
+          'Authorization': 'Bearer ' + db.sbKey
+        },
+        body: JSON.stringify(exp)
+      }).catch(e => debugLog(`❌ Create error: ${e.message}`));
+    }
   closeModal('modal-expense'); renderAll();
   toast(editingId?'Expense updated!':'Expense added!');
 }
@@ -1784,7 +1827,16 @@ async function saveExpense(){
 async function deleteExpense(id){
   if(!confirm('Delete this expense?')) return;
   db.expenses=db.expenses.filter(e=>e.id!==id);
-  if(db.sbUrl) await sbFetch('expenses?id=eq.'+id,{method:'DELETE'});
+  if(db.sbUrl && db.sbKey) {
+    const url = db.sbUrl.replace(/\/$/, '') + '/rest/v1/expenses?id=eq.' + id;
+    await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'apikey': db.sbKey,
+        'Authorization': 'Bearer ' + db.sbKey
+      }
+    }).catch(e => debugLog(`❌ Delete error: ${e.message}`));
+  }
   renderAll(); toast('Deleted');
 }
 
