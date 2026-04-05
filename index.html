@@ -1672,9 +1672,9 @@ function renderExpenses(){
       <td>${cardBadge(e.card,e.card_notes)}</td>
       <td style="max-width:160px">${jCell}</td>
       <td>${rsBadge}${roiBadge}</td>
-      <td><div class="row-actions">
-        <button class="row-btn" onclick="event.stopPropagation(); editExpense('${e.id}')">✏️</button>
-        <button class="row-btn del" onclick="event.stopPropagation(); deleteExpense('${e.id}')">🗑</button>
+      <td style="width:60px;text-align:center"><div class="row-actions">
+        <button class="row-btn del" onclick="event.stopPropagation(); deleteExpense('${e.id}')" title="Delete">🗑</button>
+        <button class="row-btn" onclick="event.stopPropagation(); editExpense('${e.id}')" title="Edit">✏️</button>
       </div></td>
     </tr>`;
   }).join('');
