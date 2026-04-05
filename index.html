@@ -1090,10 +1090,12 @@ function wipeEverything(){
 // ── SUPABASE ──────────────────────────────────────────────────────────────────
 async function sbFetch(path, opts={}) {
   if (!db.sbUrl||!db.sbKey) {
-    console.warn('Supabase not configured', {sbUrl: !!db.sbUrl, sbKey: !!db.sbKey});
+    console.warn('Supabase not configured');
     return null;
   }
   const url = db.sbUrl.replace(/\/$/,'')+'/rest/v1/'+path;
+  console.log('📡 sbFetch URL:', url);
+  
   const method = opts.method || 'GET';
   const headers = {
     'Content-Type': 'application/json',
@@ -1110,18 +1112,18 @@ async function sbFetch(path, opts={}) {
     fetchOpts.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body);
   }
   
-  console.log('sbFetch:', {url, method, hasBody: !!fetchOpts.body});
-  
   try {
+    console.log('📤 Fetching:', method, path);
     const res = await fetch(url, fetchOpts);
+    console.log('📥 Response:', res.status, res.statusText);
     if (!res.ok) {
-      console.error('Supabase error:', res.status, res.statusText, 'URL:', url);
+      console.error('❌ Supabase error:', res.status, res.statusText);
       return null;
     }
     const text = await res.text();
     return text ? JSON.parse(text) : [];
   } catch(e) {
-    console.error('sbFetch error:', e, 'URL:', url);
+    console.error('❌ sbFetch error:', e);
     return null;
   }
 }
