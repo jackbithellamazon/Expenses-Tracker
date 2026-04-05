@@ -1091,8 +1091,9 @@ function load() {
 
 function wipeEverything(){
   if(!confirm('⚠️ DELETE ALL DATA FROM SUPABASE?\n\nThis will completely wipe all your data.\n\nAre you SURE?')) return;
-  // Clear local db object
-  db = {expenses:[],recurring:[],providers:[],roiItems:[],roiReturns:{},postage:{},wizardState:{},categories:['Marketing / Ads','Software','VA / Staff','Postage','Prep Supplies','Prep Service','Business Expense','Subscriptions','Training','Finance','Accounting','Discord Group'],sbUrl:db.sbUrl,sbKey:db.sbKey};
+  const sbUrl = db.sbUrl;
+  const sbKey = db.sbKey;
+  db = {expenses:[],recurring:[],providers:[],roiItems:[],roiReturns:{},postage:{},wizardState:{},categories:['Marketing / Ads','Software','VA / Staff','Postage','Prep Supplies','Prep Service','Business Expense','Subscriptions','Training','Finance','Accounting','Discord Group'],sbUrl:sbUrl,sbKey:sbKey};
   toast('Data cleared. Reload to resync from Supabase.','success');
 }
 
@@ -3282,12 +3283,25 @@ function mpSetLastMonth(){
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function init(){
+  // LOCK IN CREDENTIALS FIRST
+  const CREDENTIALS = {
+    sbUrl: 'https://ffbdazepqrsyurhouxif.supabase.co',
+    sbKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmYmRhemVwcXJzeXVyaG91eGlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4OTM5MjIsImV4cCI6MjA5MDQ2OTkyMn0.BAuodLUDGzO9A7IfoRRn0HZ1MgWOXNPeYKPDBNaNWeg'
+  };
+  db.sbUrl = CREDENTIALS.sbUrl;
+  db.sbKey = CREDENTIALS.sbKey;
+  debugLog('🔐 Credentials locked in: sbUrl and sbKey set');
+  
   load();
   // Migrate old localStorage key if present
   const oldData = localStorage.getItem('et_db');
   if(oldData && !localStorage.getItem('et_db4')){
     try{ db={...db,...JSON.parse(oldData)}; save(); }catch(e){}
   }
+  
+  // RE-LOCK CREDENTIALS AGAIN after any migration
+  db.sbUrl = CREDENTIALS.sbUrl;
+  db.sbKey = CREDENTIALS.sbKey;
   // Migrate: fix any roiItems that were auto-created from providers but have wrong type
   if(db.roiItems && db.providers){
     const provNames = new Set(db.providers.map(p=>p.name.toLowerCase()));
