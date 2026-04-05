@@ -1123,13 +1123,13 @@ async function sbFetch(path, opts={}) {
 async function loadSB() {
   if (!db.sbUrl||!db.sbKey) return false;
   try {
-    const [e,r,c,p,ri,pt,pe] = await Promise.all([
-      sbFetch('expenses?select=*&order=date.desc'),
-      sbFetch('recurring?select=*'),
-      sbFetch('providers?select=*&order=created_at.desc'),
-      sbFetch('roi_items?select=*&order=created_at.desc'),
-      sbFetch('postage_tally?select=*'),
-      sbFetch('postage_entries?select=*')
+    const [e,r,p,ri,pt,pe] = await Promise.all([
+      sbFetch('expenses?order=date.desc'),
+      sbFetch('recurring'),
+      sbFetch('providers?order=created_at.desc'),
+      sbFetch('roi_items?order=created_at.desc'),
+      sbFetch('postage_tally'),
+      sbFetch('postage_entries')
     ]);
     if(e!==null) db.expenses=e; 
     if(r!==null) db.recurring=r; 
