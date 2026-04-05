@@ -857,7 +857,7 @@ CREATE TABLE roi_items (
     </div>
     <div class="form-grid">
       <div class="form-row"><label class="form-label">Category</label><select class="inp" id="e-category"></select></div>
-      <div class="form-row"><label class="form-label">Subcategory</label><input class="inp" type="text" id="e-subcategory" placeholder="Optional..."></div>
+
     </div>
     <div class="form-row"><label class="form-label">Name / Supplier</label><input class="inp" type="text" id="e-supplier" placeholder="e.g. Amazon, ChatGPT..."></div>
     <div class="form-row">
@@ -1066,8 +1066,8 @@ let db = {
   providers: [], roiItems: [], roiReturns: {},
   postage: {},
   categories: ['Marketing / Ads','Software','VA / Staff','Postage','Prep Supplies','Prep Service','Business Expense','Subscriptions','Training','Finance','Accounting','Discord Group'],
-  sbUrl: 'https://ffhscmrbqzqyakbwwuul.supabase.co',
-  sbKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmaHNjbXJicXpxeWFrYnd3dXVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUzMjU4NTUsImV4cCI6MjA2MDkwMTg1NX0.D5b7gvMXKYhYDMk_jLnX28s3tAhRePV9uKSRfWPJlYU'
+  sbUrl: 'https://ffbdazepqrsyurhouxif.supabase.co',
+  sbKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZmYmRhemVwcXJzeXVyaG91eGlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4OTM5MjIsImV4cCI6MjA5MDQ2OTkyMn0.BAuodLUDGzO9A7IfoRRn0HZ1MgWOXNPeYKPDBNaNWeg'
 };
 
 // ── STORAGE ───────────────────────────────────────────────────────────────────
@@ -1636,7 +1636,7 @@ function openExpModal(prefill=null){
   editingId=null; roiTrack=false;
   document.getElementById('exp-modal-title').textContent='Add Expense';
   document.getElementById('e-date').value=new Date().toISOString().split('T')[0];
-  ['e-amount','e-supplier','e-justification','e-subcategory','e-card-notes','e-notes'].forEach(id=>document.getElementById(id).value='');
+  ['e-amount','e-supplier','e-justification','e-card-notes','e-notes'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('e-necessity').value='na';
   document.getElementById('e-vat').value='20';
   document.getElementById('e-card').value='';
@@ -1664,7 +1664,6 @@ function editExpense(id){
   document.getElementById('e-date').value=e.date||'';
   document.getElementById('e-amount').value=e.amount||'';
   document.getElementById('e-category').value=e.category||'';
-  document.getElementById('e-subcategory').value=e.subcategory||'';
   document.getElementById('e-supplier').value=e.supplier||'';
   document.getElementById('e-justification').value=e.justification||'';
   document.getElementById('e-necessity').value=e.necessity||'na';
@@ -1687,7 +1686,6 @@ async function saveExpense(){
   const key=y+'-'+String(m).padStart(2,'0');
   const exp={
     id:editingId||uid(), date, amount:parseFloat(amount), category,
-    subcategory:document.getElementById('e-subcategory').value,
     supplier:document.getElementById('e-supplier').value,
     justification:document.getElementById('e-justification').value,
     necessity:document.getElementById('e-necessity').value,
@@ -1700,12 +1698,12 @@ async function saveExpense(){
   if(editingId){
     const idx=db.expenses.findIndex(x=>x.id===editingId);
     if(idx!==-1){exp.checked=db.expenses[idx].checked;exp.sf_done=db.expenses[idx].sf_done;exp.review_status=db.expenses[idx].review_status||'';db.expenses[idx]=exp;}
-    if(db.sbUrl) await sbFetch('expenses?id=eq.'+exp.id,{method:'PATCH',body:JSON.stringify(exp),prefer:'return=minimal'});
+    if(db.sbUrl) await sbFetch('expenses?id=eq.'+exp.id,{method:'PATCH',body:JSON.stringify(exp)});
   } else {
     db.expenses.unshift(exp);
     if(db.sbUrl) await sbFetch('expenses',{method:'POST',body:JSON.stringify(exp)});
   }
-  save(); closeModal('modal-expense'); renderAll();
+  closeModal('modal-expense'); renderAll();
   toast(editingId?'Expense updated!':'Expense added!');
 }
 
@@ -2564,7 +2562,23 @@ function removeCat(cat){
 function populateCatSelects(){
   const opts=db.categories.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
   const expCat=document.getElementById('e-category');
-  if(expCat) expCat.innerHTML='<option value="">— Select category</option>'+opts;
+  if(expCat) {
+    expCat.innerHTML='<option value="">— Select category</option><option value="__ADD_NEW__">+ Add new category...</option>'+opts;
+    expCat.addEventListener('change', function() {
+      if (this.value === '__ADD_NEW__') {
+        const newCat = prompt('Enter new category name:');
+        if (newCat && newCat.trim()) {
+          const trimmed = newCat.trim();
+          if (!db.categories.includes(trimmed)) {
+            db.categories.push(trimmed);
+            populateCatSelects();
+            expCat.value = trimmed;
+          }
+        }
+        this.value = '';
+      }
+    });
+  }
   const recCat=document.getElementById('r-category');
   if(recCat) recCat.innerHTML=opts;
   updateCatFilter();
