@@ -2473,8 +2473,8 @@ function renderRoi(){
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span style="font-size:11px;color:var(--muted2)">Profit (£):</span>
-        <input class="roi-return-inp" type="number" step="0.01" value="${r.value_return||''}" placeholder="0.00" onchange="saveProviderRoiReturn('${r.id}',this.value)">
-        ${r.value_return>0?`<span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--${cls==='green'?'green':cls==='red'?'red':'orange'})">${roi.toFixed(0)}% ROI</span>`:''}
+        <input class="roi-return-inp" type="number" step="0.01" value="${(r.value_return||0)}" placeholder="0.00" onchange="saveProviderRoiReturn('${r.id}',this.value)">
+        ${(r.value_return||0)>0?`<span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--${cls==='green'?'green':cls==='red'?'red':'orange'})">${roi.toFixed(0)}% ROI</span>`:''}
         <button class="row-btn" onclick="editRoi('${r.id}')" style="opacity:1;margin-left:auto">✏️</button>
         <button class="row-btn del" onclick="deleteRoi('${r.id}')" style="opacity:1">🗑</button>
       </div>
