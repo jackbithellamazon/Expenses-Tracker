@@ -168,7 +168,7 @@ tbody td{padding:8px 12px;font-size:12px;vertical-align:middle}
 .sf-box.checked{background:var(--blue);border-color:var(--blue);color:#fff}
 
 /* ── ROW ACTIONS ── */
-.row-actions{display:flex;gap:3px;opacity:0}
+.row-actions{display:flex;gap:3px;opacity:1}
 tr:hover .row-actions{opacity:1}
 .row-btn{background:none;border:none;color:var(--muted);cursor:pointer;padding:3px 4px;border-radius:4px;font-size:12px;transition:all .15s}
 .row-btn:hover{background:var(--surface3);color:var(--text)}
@@ -544,7 +544,7 @@ select.inp option{background:var(--surface2);color:var(--text)}
                 <th>Card</th>
                 <th>Justification</th>
                 <th>Need</th>
-                <th></th>
+                <th style="text-align:center;width:50px">Delete</th>
               </tr></thead>
               <tbody id="exp-tbody"></tbody>
             </table>
@@ -1820,6 +1820,7 @@ async function saveExpense(){
         body: JSON.stringify(exp)
       }).catch(e => debugLog(`❌ Create error: ${e.message}`));
     }
+  }
   closeModal('modal-expense'); renderAll();
   toast(editingId?'Expense updated!':'Expense added!');
 }
