@@ -1155,15 +1155,31 @@ async function loadSB() {
     return false;
   }
   try {
-    debugLog('📥 Fetching tables...');
-    const [e,r,p,ri,pt,pe] = await Promise.all([
-      sbFetch('expenses'),
-      sbFetch('recurring'),
-      sbFetch('providers'),
-      sbFetch('roi_items'),
-      sbFetch('postage_tally'),
-      sbFetch('postage_entries')
+    debugLog('📥 Fetching tables (direct fetch, no params)...');
+    const url = db.sbUrl.replace(/\/$/, '');
+    const headers = {
+      'Content-Type': 'application/json',
+      'apikey': db.sbKey,
+      'Authorization': 'Bearer ' + db.sbKey
+    };
+    
+    // Direct fetch - NO query params to avoid "Params are not set" error
+    const [eRes, rRes, pRes, riRes, ptRes, peRes] = await Promise.all([
+      fetch(url + '/rest/v1/expenses', { method: 'GET', headers }),
+      fetch(url + '/rest/v1/recurring', { method: 'GET', headers }),
+      fetch(url + '/rest/v1/providers', { method: 'GET', headers }),
+      fetch(url + '/rest/v1/roi_items', { method: 'GET', headers }),
+      fetch(url + '/rest/v1/postage_tally', { method: 'GET', headers }),
+      fetch(url + '/rest/v1/postage_entries', { method: 'GET', headers })
     ]);
+    
+    const e = eRes.ok ? await eRes.json() : null;
+    const r = rRes.ok ? await rRes.json() : null;
+    const p = pRes.ok ? await pRes.json() : null;
+    const ri = riRes.ok ? await riRes.json() : null;
+    const pt = ptRes.ok ? await ptRes.json() : null;
+    const pe = peRes.ok ? await peRes.json() : null;
+    
     debugLog(`✅ Loaded: expenses=${e?.length||0}, recurring=${r?.length||0}, providers=${p?.length||0}`);
     if(e!==null) db.expenses=e; 
     if(r!==null) db.recurring=r; 
@@ -3302,6 +3318,8 @@ async function init(){
   // RE-LOCK CREDENTIALS AGAIN after any migration
   db.sbUrl = CREDENTIALS.sbUrl;
   db.sbKey = CREDENTIALS.sbKey;
+  // NOW load data from Supabase
+  if(db.sbUrl && db.sbKey) await loadSB();
   // Migrate: fix any roiItems that were auto-created from providers but have wrong type
   if(db.roiItems && db.providers){
     const provNames = new Set(db.providers.map(p=>p.name.toLowerCase()));
