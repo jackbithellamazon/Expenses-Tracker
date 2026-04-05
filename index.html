@@ -1159,8 +1159,7 @@ async function syncPostageToSupabase(monthKey, carrier, data) {
     // Upsert postage_tally
     const tallyRes = await sbFetch('postage_tally?month_key=eq.'+monthKey+'&carrier=eq.'+carrier, {
       method: 'POST',
-      body: JSON.stringify({ month_key: monthKey, carrier: carrier, total: data.total }),
-      headers: { 'Prefer': 'resolution=merge-duplicates' }
+      body: JSON.stringify({ month_key: monthKey, carrier: carrier, total: data.total })
     });
     
     if (!tallyRes || tallyRes.length === 0) return;
@@ -1177,8 +1176,7 @@ async function syncPostageToSupabase(monthKey, carrier, data) {
     if (data.entries && data.entries.length > 0) {
       await sbFetch('postage_entries', {
         method: 'POST',
-        body: JSON.stringify(data.entries.map(e => ({ tally_id: tallyId, date: e.date, amount: e.amount }))),
-        headers: { 'Prefer': 'return=minimal' }
+        body: JSON.stringify(data.entries.map(e => ({ tally_id: tallyId, date: e.date, amount: e.amount })))
       });
     }
   } catch(e) {
@@ -1191,8 +1189,7 @@ async function syncExpenseToSupabase(expense) {
   try {
     await sbFetch('expenses', {
       method: 'POST',
-      body: JSON.stringify(expense),
-      headers: { 'Prefer': 'resolution=merge-duplicates' }
+      body: JSON.stringify(expense)
     });
   } catch(e) {
     console.error('Expense sync error:', e);
@@ -1204,8 +1201,7 @@ async function syncProviderToSupabase(provider) {
   try {
     await sbFetch('providers', {
       method: 'POST',
-      body: JSON.stringify(provider),
-      headers: { 'Prefer': 'resolution=merge-duplicates' }
+      body: JSON.stringify(provider)
     });
   } catch(e) {
     console.error('Provider sync error:', e);
@@ -1217,8 +1213,7 @@ async function syncRecurringToSupabase(recurring) {
   try {
     await sbFetch('recurring', {
       method: 'POST',
-      body: JSON.stringify(recurring),
-      headers: { 'Prefer': 'resolution=merge-duplicates' }
+      body: JSON.stringify(recurring)
     });
   } catch(e) {
     console.error('Recurring sync error:', e);
@@ -1230,8 +1225,7 @@ async function syncROIToSupabase(roiItem) {
   try {
     await sbFetch('roi_items', {
       method: 'POST',
-      body: JSON.stringify(roiItem),
-      headers: { 'Prefer': 'resolution=merge-duplicates' }
+      body: JSON.stringify(roiItem)
     });
   } catch(e) {
     console.error('ROI sync error:', e);
@@ -1635,13 +1629,13 @@ function renderExpenses(){
 async function toggleCheck(id){
   const e=db.expenses.find(x=>x.id===id); if(!e) return;
   e.checked=!e.checked; save();
-  if(db.sbUrl) await sbFetch('expenses?id=eq.'+id,{method:'PATCH',body:JSON.stringify({checked:e.checked}),prefer:'return=minimal'});
+  if(db.sbUrl) await sbFetch('expenses?id=eq.'+id,{method:'PATCH',body:JSON.stringify({checked:e.checked})});
   renderExpenses(); renderDashboard();
 }
 async function toggleSF(id){
   const e=db.expenses.find(x=>x.id===id); if(!e) return;
   e.sf_done=!e.sf_done; save();
-  if(db.sbUrl) await sbFetch('expenses?id=eq.'+id,{method:'PATCH',body:JSON.stringify({sf_done:e.sf_done}),prefer:'return=minimal'});
+  if(db.sbUrl) await sbFetch('expenses?id=eq.'+id,{method:'PATCH',body:JSON.stringify({sf_done:e.sf_done})});
   renderExpenses();
   toast(e.sf_done?'Marked as in Seller Fuse':'Removed from Seller Fuse');
 }
@@ -2544,7 +2538,7 @@ async function saveRoiItem(){
 async function deleteRoi(id){
   if(!confirm('Delete?')) return;
   db.roiItems=db.roiItems.filter(r=>r.id!==id);
-  if(db.sbUrl)await sbFetch('roi_items?id=eq.'+id,{method:'DELETE',prefer:'return=minimal'});
+  if(db.sbUrl)await sbFetch('roi_items?id=eq.'+id,{method:'DELETE'});
   save(); renderRoi(); renderDashboard(); toast('Deleted');
 }
 
