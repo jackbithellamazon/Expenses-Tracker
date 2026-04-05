@@ -1101,7 +1101,6 @@ async function loadSB() {
     const [e,r,c,p,ri,pt,pe] = await Promise.all([
       sbFetch('expenses?select=*&order=date.desc'),
       sbFetch('recurring?select=*'),
-      sbFetch('recurring_confirmations?select=*'),
       sbFetch('providers?select=*&order=created_at.desc'),
       sbFetch('roi_items?select=*&order=created_at.desc'),
       sbFetch('postage_tally?select=*'),
@@ -1109,7 +1108,6 @@ async function loadSB() {
     ]);
     if(e!==null) db.expenses=e; 
     if(r!==null) db.recurring=r; 
-    if(c!==null) db.recurringConfs=c; 
     if(p!==null) db.providers=p; 
     if(ri!==null) db.roiItems=ri;
     
@@ -1710,8 +1708,8 @@ async function saveExpense(){
 async function deleteExpense(id){
   if(!confirm('Delete this expense?')) return;
   db.expenses=db.expenses.filter(e=>e.id!==id);
-  if(db.sbUrl) await sbFetch('expenses?id=eq.'+id,{method:'DELETE',prefer:'return=minimal'});
-  save(); renderAll(); toast('Deleted');
+  if(db.sbUrl) await sbFetch('expenses?id=eq.'+id,{method:'DELETE'});
+  renderAll(); toast('Deleted');
 }
 
 function quickAddRecurring(recurringId){
@@ -2059,7 +2057,7 @@ async function saveProvider(){
   if(editingId){
     const idx=db.providers.findIndex(p=>p.id===editingId);
     if(idx!==-1)db.providers[idx]=prov;
-    if(db.sbUrl)await sbFetch('providers?id=eq.'+prov.id,{method:'PATCH',body:JSON.stringify(prov),prefer:'return=minimal'});
+    if(db.sbUrl)await sbFetch('providers?id=eq.'+prov.id,{method:'PATCH',body:JSON.stringify(prov)});
     // Update matching ROI item if it exists
     const roiIdx=db.roiItems.findIndex(r=>r.month_key===prov.month_key&&r.name===db.providers[idx]?.name);
     if(roiIdx!==-1){db.roiItems[roiIdx].name=prov.name;db.roiItems[roiIdx].monthly_cost=prov.cost;}
@@ -2071,14 +2069,14 @@ async function saveProvider(){
     db.roiItems.push(roiItem);
     if(db.sbUrl)await sbFetch('roi_items',{method:'POST',body:JSON.stringify(roiItem)});
   }
-  save(); closeModal('modal-prov'); renderProviders(); renderRoi(); renderDashboard();
+  closeModal('modal-prov'); renderProviders(); renderRoi(); renderDashboard();
   toast(editingId?'Updated!':'Provider added + ROI created!');
 }
 async function deleteProvider(id){
   if(!confirm('Delete provider?')) return;
   db.providers=db.providers.filter(p=>p.id!==id);
-  if(db.sbUrl)await sbFetch('providers?id=eq.'+id,{method:'DELETE',prefer:'return=minimal'});
-  save(); renderProviders(); renderDashboard(); toast('Deleted');
+  if(db.sbUrl)await sbFetch('providers?id=eq.'+id,{method:'DELETE'});
+  renderProviders(); renderDashboard(); toast('Deleted');
 }
 
 // ── ANALYSE ───────────────────────────────────────────────────────────────────
